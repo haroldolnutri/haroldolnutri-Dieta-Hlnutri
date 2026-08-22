@@ -8,7 +8,7 @@ Aplicação React/Vite do **NutriPlanner @hlnutri** para gestão de pacientes, a
 
 ## Requisitos
 
-- [Node.js](https://nodejs.org/) 20 ou superior
+- [Node.js](https://nodejs.org/) 22 ou superior
 - npm (instalado junto com o Node)
 
 ## Rodando localmente
@@ -39,8 +39,27 @@ nutri-planner/
 ├── src/
 │   ├── main.jsx      # ponto de entrada
 │   ├── App.jsx        # componente principal (NutriPlanner)
+│   ├── auth/           # sessão, login e recuperação de senha
 │   └── index.css      # estilos base
 ```
+
+## Acesso protegido
+
+O login usa o Supabase Auth. A senha é validada pelo serviço de autenticação e nunca deve ser colocada no código ou nas configurações do GitHub.
+
+1. Crie um projeto no Supabase.
+2. Em **Authentication → Providers → Email**, mantenha o login por e-mail ativo e desative novos cadastros públicos.
+3. Em **Authentication → Users**, crie manualmente a única conta autorizada.
+4. Em **Authentication → URL Configuration**, configure:
+   - Site URL: `https://haroldolnutri.github.io/haroldolnutri-Dieta-Hlnutri/`
+   - Redirect URL: `https://haroldolnutri.github.io/haroldolnutri-Dieta-Hlnutri/**`
+5. No GitHub, em **Settings → Secrets and variables → Actions → Variables**, crie:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+Use somente a chave pública (`publishable`). Nunca coloque uma chave `secret` ou `service_role` no navegador.
+
+Para desenvolvimento local, copie `.env.example` para `.env.local` e preencha apenas os dois valores públicos.
 
 ## Publicação automática
 
