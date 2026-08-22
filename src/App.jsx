@@ -117,6 +117,25 @@ const expandMeasures = (measures = []) => {
   return expanded;
 };
 
+const normalizeMeasures = (measures = []) => {
+  const normalized = [];
+  const seen = new Set();
+
+  measures.forEach((measure) => {
+    const label = String(measure.label || "").trim();
+    const grams = Number(measure.grams);
+    if (!label || !Number.isFinite(grams) || grams <= 0 || seen.has(label)) return;
+    seen.add(label);
+    normalized.push({ label, grams });
+  });
+
+  if (!normalized.some((measure) => measure.label.startsWith("g"))) {
+    normalized.push({ label: "g (gramas)", grams: 1 });
+  }
+
+  return normalized;
+};
+
 const F = (name, category, kcal, protein, carbs, fat, fiber, measures) => ({
   id: "f" + (_foodSeq++),
   name, category,
@@ -945,17 +964,57 @@ const PatientDetailView = ({ patient, diets, foods, goTo, onDeleteDiet, onDuplic
 /* ============================================================
    FOODS VIEW (banco de alimentos)
    ============================================================ */
-const FoodForm = ({ onSave, onCancel }) => {
-  const [name, setName] = useState(""); const [category, setCategory] = useState(CATEGORIES[0]);
-  const [kcal, setKcal] = useState(""); const [protein, setProtein] = useState("");
-  const [carbs, setCarbs] = useState(""); const [fat, setFat] = useState(""); const [fiber, setFiber] = useState("");
-  const [measureLabel, setMeasureLabel] = useState("1 unidade"); const [measureGrams, setMeasureGrams] = useState("");
-  const canSave = name.trim() && kcal !== "";
+const FoodForm = ({ food = null, onSave, onCancel }) => {
+  const [name, setName] = useState(food?.name || "");
+  const [category, setCategory] = useState(food?.category || CATEGORIES[0]);
+  const [kcal, setKcal] = useState(food ? String(food.per100.kcal) : "");
+  const [protein, setProtein] = useState(food ? String(food.per100.protein) : "");
+  const [carbs, setCarbs] = useState(food ? String(food.per100.carbs) : "");
+  const [fat, setFat] = useState(food ? String(food.per100.fat) : "");
+  const [fiber, setFiber] = useState(food ? String(food.per100.fiber) : "");
+  const [measures, setMeasures] = useState(() => {
+    const householdMeasures = (food?.measures || [])
+      .filter((measure) => !measure.label.startsWith("g"))
+      .map((measure) => ({ id: uid("measure_"), label: measure.label, grams: String(measure.grams) }));
+    return householdMeasures.length
+      ? householdMeasures
+      : [{ id: uid("measure_"), label: "1 unidade", grams: "" }];
+  });
+
+  const hasIncompleteMeasure = measures.some((measure) => {
+    const hasLabel = Boolean(measure.label.trim());
+    const grams = Number(measure.grams);
+    return hasLabel !== (Number.isFinite(grams) && grams > 0);
+  });
+  const canSave = Boolean(name.trim() && kcal !== "" && !hasIncompleteMeasure);
+
+  const updateMeasure = (id, field, value) => {
+    setMeasures((current) => current.map((measure) => measure.id === id ? { ...measure, [field]: value } : measure));
+  };
+
+  const saveFood = () => {
+    if (!canSave) return;
+    onSave({
+      name: name.trim(),
+      category,
+      per100: {
+        kcal: parseFloat(kcal) || 0,
+        protein: parseFloat(protein) || 0,
+        carbs: parseFloat(carbs) || 0,
+        fat: parseFloat(fat) || 0,
+        fiber: parseFloat(fiber) || 0,
+      },
+      measures: measures
+        .filter((measure) => measure.label.trim() && Number(measure.grams) > 0)
+        .map((measure) => ({ label: measure.label.trim(), grams: Number(measure.grams) })),
+    });
+  };
 
   return (
     <Card style={{ padding: 20, marginBottom: 18, border: "1px solid var(--border-strong)" }}>
-      <h3 className="npx-display" style={{ fontSize: 17, fontWeight: 600, marginBottom: 14 }}>Novo alimento personalizado</h3>
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1.3fr", gap: 12, marginBottom: 12 }}>
+      <h3 className="npx-display" style={{ fontSize: 17, fontWeight: 600, marginBottom: 4 }}>{food ? "Editar alimento" : "Novo alimento personalizado"}</h3>
+      {food && <p style={{ margin: "0 0 14px", color: "var(--text-muted)", fontSize: 12.5 }}>Altere qualquer informação abaixo. As mudanças também serão usadas nos cálculos das dietas.</p>}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 12 }}>
         <Field label="Nome do alimento"><input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Pão sírio integral" /></Field>
         <Field label="Categoria">
           <select style={inputStyle} value={category} onChange={(e) => setCategory(e.target.value)}>
@@ -964,33 +1023,40 @@ const FoodForm = ({ onSave, onCancel }) => {
         </Field>
       </div>
       <div style={{ fontSize: 11.5, color: "var(--text-soft)", marginBottom: 6, fontWeight: 700, textTransform: "uppercase" }}>Valores por 100g</div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 14 }}>
-        <Field label="Kcal"><input type="number" style={inputStyle} value={kcal} onChange={(e) => setKcal(e.target.value)} /></Field>
-        <Field label="Proteínas (g)"><input type="number" style={inputStyle} value={protein} onChange={(e) => setProtein(e.target.value)} /></Field>
-        <Field label="Carboidratos (g)"><input type="number" style={inputStyle} value={carbs} onChange={(e) => setCarbs(e.target.value)} /></Field>
-        <Field label="Gorduras (g)"><input type="number" style={inputStyle} value={fat} onChange={(e) => setFat(e.target.value)} /></Field>
-        <Field label="Fibras (g)"><input type="number" style={inputStyle} value={fiber} onChange={(e) => setFiber(e.target.value)} /></Field>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, marginBottom: 14 }}>
+        <Field label="Kcal"><input type="number" min="0" step="any" style={inputStyle} value={kcal} onChange={(e) => setKcal(e.target.value)} /></Field>
+        <Field label="Proteínas (g)"><input type="number" min="0" step="any" style={inputStyle} value={protein} onChange={(e) => setProtein(e.target.value)} /></Field>
+        <Field label="Carboidratos (g)"><input type="number" min="0" step="any" style={inputStyle} value={carbs} onChange={(e) => setCarbs(e.target.value)} /></Field>
+        <Field label="Gorduras (g)"><input type="number" min="0" step="any" style={inputStyle} value={fat} onChange={(e) => setFat(e.target.value)} /></Field>
+        <Field label="Fibras (g)"><input type="number" min="0" step="any" style={inputStyle} value={fiber} onChange={(e) => setFiber(e.target.value)} /></Field>
       </div>
-      <div style={{ fontSize: 11.5, color: "var(--text-soft)", marginBottom: 6, fontWeight: 700, textTransform: "uppercase" }}>Medida caseira</div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-        <Field label="Nome da medida"><input style={inputStyle} value={measureLabel} onChange={(e) => setMeasureLabel(e.target.value)} placeholder="Ex: 1 fatia" /></Field>
-        <Field label="Peso correspondente (g)"><input type="number" style={inputStyle} value={measureGrams} onChange={(e) => setMeasureGrams(e.target.value)} placeholder="Ex: 30" /></Field>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
+        <div style={{ fontSize: 11.5, color: "var(--text-soft)", fontWeight: 700, textTransform: "uppercase" }}>Medidas caseiras</div>
+        <Btn type="button" size="sm" variant="subtle" icon={Plus} onClick={() => setMeasures((current) => [...current, { id: uid("measure_"), label: "", grams: "" }])}>Adicionar medida</Btn>
       </div>
+      <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
+        {measures.map((measure) => (
+          <div key={measure.id} style={{ display: "grid", gridTemplateColumns: "minmax(180px, 1.4fr) minmax(130px, 1fr) 38px", gap: 10, alignItems: "end" }}>
+            <Field label="Nome da medida"><input style={inputStyle} value={measure.label} onChange={(e) => updateMeasure(measure.id, "label", e.target.value)} placeholder="Ex: 1 fatia" /></Field>
+            <Field label="Peso correspondente (g)"><input type="number" min="0" step="any" style={inputStyle} value={measure.grams} onChange={(e) => updateMeasure(measure.id, "grams", e.target.value)} placeholder="Ex: 30" /></Field>
+            <button type="button" title="Remover medida" aria-label="Remover medida" onClick={() => setMeasures((current) => current.filter((item) => item.id !== measure.id))} style={{ width: 38, height: 38, display: "grid", placeItems: "center", border: "1px solid var(--danger-light)", borderRadius: 8, color: "var(--danger)", background: "#fff", cursor: "pointer" }}><Trash2 size={15} /></button>
+          </div>
+        ))}
+        {measures.length === 0 && <div style={{ padding: 10, borderRadius: 8, color: "var(--text-muted)", background: "var(--surface-alt)", fontSize: 12.5 }}>Sem medida caseira. A opção em gramas continuará disponível automaticamente.</div>}
+      </div>
+      {hasIncompleteMeasure && <div style={{ margin: "-6px 0 12px", color: "var(--danger)", fontSize: 12 }}>Preencha o nome e o peso de cada medida ou remova a linha incompleta.</div>}
       <div style={{ display: "flex", gap: 10 }}>
-        <Btn variant="primary" icon={Check} style={{ opacity: canSave ? 1 : 0.5 }} disabled={!canSave} onClick={() => canSave && onSave({
-          name, category,
-          per100: { kcal: parseFloat(kcal) || 0, protein: parseFloat(protein) || 0, carbs: parseFloat(carbs) || 0, fat: parseFloat(fat) || 0, fiber: parseFloat(fiber) || 0 },
-          measures: measureGrams ? [{ label: measureLabel || "1 unidade", grams: parseFloat(measureGrams) }] : [],
-        })}>Salvar alimento</Btn>
-        <Btn variant="ghost" icon={X} onClick={onCancel}>Cancelar</Btn>
+        <Btn type="button" variant="primary" icon={Check} style={{ opacity: canSave ? 1 : 0.5 }} disabled={!canSave} onClick={saveFood}>{food ? "Salvar alterações" : "Salvar alimento"}</Btn>
+        <Btn type="button" variant="ghost" icon={X} onClick={onCancel}>Cancelar</Btn>
       </div>
     </Card>
   );
 };
 
-const FoodsView = ({ foods, setFoods }) => {
+const FoodsView = ({ foods, setFoods, onUpdateFood }) => {
   const [q, setQ] = useState(""); const [cat, setCat] = useState("Todas");
   const [showForm, setShowForm] = useState(false);
+  const [editingFoodId, setEditingFoodId] = useState(null);
   const [onlyFav, setOnlyFav] = useState(false);
 
   const filtered = foods.filter(f =>
@@ -1004,16 +1070,33 @@ const FoodsView = ({ foods, setFoods }) => {
     setFoods(fs => [...fs, { id: uid("cf"), favorite: false, usageCount: 0, custom: true, ...data, measures: expandMeasures(data.measures) }]);
     setShowForm(false);
   };
+  const editFood = (data) => {
+    onUpdateFood(editingFoodId, { ...data, measures: normalizeMeasures(data.measures) });
+    setEditingFoodId(null);
+  };
   const removeFood = (id) => setFoods(fs => fs.filter(f => f.id !== id));
+  const editingFood = foods.find((food) => food.id === editingFoodId) || null;
+
+  const openNewFood = () => {
+    setEditingFoodId(null);
+    setShowForm((current) => !current);
+  };
+
+  const openEditFood = (id) => {
+    setShowForm(false);
+    setEditingFoodId(id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
         <h1 className="npx-display" style={{ fontSize: 24, fontWeight: 600 }}>Banco de alimentos</h1>
-        <Btn variant="primary" icon={Plus} onClick={() => setShowForm(s => !s)}>Alimento personalizado</Btn>
+        <Btn variant="primary" icon={Plus} onClick={openNewFood}>Alimento personalizado</Btn>
       </div>
 
-      {showForm && <FoodForm onSave={addFood} onCancel={() => setShowForm(false)} />}
+      {showForm && <FoodForm key="new-food" onSave={addFood} onCancel={() => setShowForm(false)} />}
+      {editingFood && <FoodForm key={editingFood.id} food={editingFood} onSave={editFood} onCancel={() => setEditingFoodId(null)} />}
 
       <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
         <div style={{ position: "relative", flex: "1 1 260px" }}>
@@ -1028,13 +1111,13 @@ const FoodsView = ({ foods, setFoods }) => {
       </div>
 
       <Card style={{ overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "28px 2fr 1.4fr 70px 70px 70px 70px 1.2fr 32px", gap: 8, padding: "10px 16px", fontSize: 10.5, fontWeight: 700, color: "var(--text-soft)", textTransform: "uppercase", letterSpacing: "0.03em", borderBottom: "1px solid var(--border)", background: "var(--surface-alt)" }}>
-          <span></span><span>Nome</span><span>Categoria</span><span>Kcal</span><span>Prot.</span><span>Carb.</span><span>Gord.</span><span>Medida caseira</span><span></span>
+        <div style={{ display: "grid", gridTemplateColumns: "28px 2fr 1.4fr 70px 70px 70px 70px 1.2fr 74px", gap: 8, padding: "10px 16px", fontSize: 10.5, fontWeight: 700, color: "var(--text-soft)", textTransform: "uppercase", letterSpacing: "0.03em", borderBottom: "1px solid var(--border)", background: "var(--surface-alt)" }}>
+          <span></span><span>Nome</span><span>Categoria</span><span>Kcal</span><span>Prot.</span><span>Carb.</span><span>Gord.</span><span>Medida caseira</span><span>Ações</span>
         </div>
         <div className="npx-scroll" style={{ maxHeight: 560, overflowY: "auto" }}>
           {filtered.length === 0 && <div style={{ padding: 24, textAlign: "center", color: "var(--text-soft)" }}>Nenhum alimento encontrado para esse filtro.</div>}
           {filtered.map(f => (
-            <div key={f.id} style={{ display: "grid", gridTemplateColumns: "28px 2fr 1.4fr 70px 70px 70px 70px 1.2fr 32px", gap: 8, padding: "10px 16px", borderBottom: "1px solid var(--border)", alignItems: "center", fontSize: 13 }}>
+            <div key={f.id} style={{ display: "grid", gridTemplateColumns: "28px 2fr 1.4fr 70px 70px 70px 70px 1.2fr 74px", gap: 8, padding: "10px 16px", borderBottom: "1px solid var(--border)", alignItems: "center", fontSize: 13 }}>
               <button onClick={() => toggleFav(f.id)} style={{ border: "none", background: "transparent", padding: 0 }}>
                 <Star size={16} fill={f.favorite ? "var(--accent)" : "none"} color={f.favorite ? "var(--accent)" : "var(--text-soft)"} />
               </button>
@@ -1045,7 +1128,10 @@ const FoodsView = ({ foods, setFoods }) => {
               <span className="npx-mono" style={{ color: "var(--carbs)" }}>{f.per100.carbs}</span>
               <span className="npx-mono" style={{ color: "var(--fat)" }}>{f.per100.fat}</span>
               <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{f.measures.filter(m => !m.label.startsWith("g")).map(m => m.label).join(", ") || "—"}</span>
-              {f.custom ? <button onClick={() => removeFood(f.id)} style={{ border: "none", background: "transparent", color: "var(--danger)" }}><Trash2 size={14} /></button> : <span />}
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <button title="Editar alimento" aria-label={`Editar ${f.name}`} onClick={() => openEditFood(f.id)} style={{ width: 28, height: 28, display: "grid", placeItems: "center", border: "1px solid var(--border)", borderRadius: 7, background: "#fff", color: "var(--primary)", cursor: "pointer" }}><Pencil size={14} /></button>
+                {f.custom && <button title="Excluir alimento" aria-label={`Excluir ${f.name}`} onClick={() => removeFood(f.id)} style={{ width: 28, height: 28, display: "grid", placeItems: "center", border: "1px solid var(--danger-light)", borderRadius: 7, background: "#fff", color: "var(--danger)", cursor: "pointer" }}><Trash2 size={14} /></button>}
+              </span>
             </div>
           ))}
         </div>
@@ -1461,6 +1547,39 @@ export default function NutriPlanner({ onLogout }) {
     setDiets(ds => [...ds, copy]);
   };
 
+  const updateFood = (id, data) => {
+    const previousFood = foods.find((food) => food.id === id);
+    if (!previousFood) return;
+
+    const nextMeasures = normalizeMeasures(data.measures);
+    const nextFood = { ...previousFood, ...data, measures: nextMeasures };
+    setFoods((current) => current.map((food) => food.id === id ? nextFood : food));
+
+    const updateDietItems = (diet) => {
+      if (!diet) return diet;
+      let changed = false;
+      const meals = diet.meals.map((meal) => {
+        let mealChanged = false;
+        const items = meal.items.map((item) => {
+          if (item.foodId !== id || nextMeasures.some((measure) => measure.label === item.measureLabel)) return item;
+
+          const previousMeasure = previousFood.measures.find((measure) => measure.label === item.measureLabel);
+          const grams = item.measureLabel.startsWith("g")
+            ? Number(item.qty) || 0
+            : (Number(item.qty) || 0) * (previousMeasure?.grams || 1);
+          changed = true;
+          mealChanged = true;
+          return { ...item, qty: round1(grams), measureLabel: "g (gramas)" };
+        });
+        return mealChanged ? { ...meal, items } : meal;
+      });
+      return changed ? { ...diet, meals } : diet;
+    };
+
+    setDiets((current) => current.map(updateDietItems));
+    setDraftDiet((current) => updateDietItems(current));
+  };
+
   const exportPdf = () => {
     saveDraftDiet();
     setPrintMode(true);
@@ -1492,7 +1611,7 @@ export default function NutriPlanner({ onLogout }) {
               <PatientDetailView patient={currentPatient} diets={diets} foods={foods} goTo={goTo}
                 onDeleteDiet={deleteDiet} onDuplicateDiet={duplicateDiet} />
             )}
-            {view === "foods" && <FoodsView foods={foods} setFoods={setFoods} />}
+            {view === "foods" && <FoodsView foods={foods} setFoods={setFoods} onUpdateFood={updateFood} />}
             {view === "diets" && <DietsView diets={diets} patients={patients} foods={foods} goTo={goTo} onDelete={deleteDiet} onDuplicate={duplicateDiet} />}
             {view === "dietEditor" && (
               <DietEditorView diet={draftDiet} patients={patients} foods={foods} setFoods={setFoods}
