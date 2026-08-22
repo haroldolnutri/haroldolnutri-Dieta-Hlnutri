@@ -1,10 +1,14 @@
-# Nutri Planner
+# Dieta HLNutri
 
-Aplicação React para gestão de pacientes, alimentos e planos alimentares (@hlnutri).
+Aplicação React/Vite do **NutriPlanner @hlnutri** para gestão de pacientes, alimentos, planos alimentares, substituições equivalentes e exportação em PDF.
+
+## Site publicado
+
+<https://haroldolnutri.github.io/haroldolnutri-Dieta-Hlnutri/>
 
 ## Requisitos
 
-- [Node.js](https://nodejs.org/) 18 ou superior
+- [Node.js](https://nodejs.org/) 20 ou superior
 - npm (instalado junto com o Node)
 
 ## Rodando localmente
@@ -38,16 +42,12 @@ nutri-planner/
 │   └── index.css      # estilos base
 ```
 
-## Publicando no GitHub
+## Publicação automática
 
-```bash
-cd nutri-planner
-git init
-git add .
-git commit -m "Primeiro commit"
-git branch -M main
-git remote add origin https://github.com/SEU_USUARIO/NOME_DO_REPO.git
-git push -u origin main
-```
+O workflow `.github/workflows/deploy-pages.yml` valida a build e publica a pasta `dist` no GitHub Pages sempre que a branch `main` recebe alterações.
 
-Troque `SEU_USUARIO/NOME_DO_REPO` pelo caminho do seu repositório no GitHub.
+No GitHub, em **Settings → Pages → Build and deployment**, use **GitHub Actions** como fonte de publicação.
+
+## Armazenamento
+
+Pacientes, alimentos e dietas ficam salvos no navegador usado para acessar o sistema. Esta versão não possui banco de dados compartilhado.
