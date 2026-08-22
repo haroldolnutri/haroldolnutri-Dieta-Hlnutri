@@ -34,8 +34,8 @@ jobs:
       - name: Validar e gerar o site
         run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_URL: https://kdbdvscxfsgzrdpteome.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_7TsVD4ORVd7e0LotS-Sstg_skKqp9Yc
 
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5

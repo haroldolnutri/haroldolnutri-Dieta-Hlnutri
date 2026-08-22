@@ -53,9 +53,7 @@ O login usa o Supabase Auth. A senha é validada pelo serviço de autenticação
 4. Em **Authentication → URL Configuration**, configure:
    - Site URL: `https://haroldolnutri.github.io/haroldolnutri-Dieta-Hlnutri/`
    - Redirect URL: `https://haroldolnutri.github.io/haroldolnutri-Dieta-Hlnutri/**`
-5. No GitHub, em **Settings → Secrets and variables → Actions → Variables**, crie:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_PUBLISHABLE_KEY`
+5. O workflow de publicação fornece ao build a URL e a chave pública do projeto Supabase.
 
 Use somente a chave pública (`publishable`). Nunca coloque uma chave `secret` ou `service_role` no navegador.
 
