@@ -4,7 +4,7 @@ import {
   Search, Plus, Trash2, ChevronUp, ChevronDown, Star, FileDown,
   Copy, Pencil, X, Check, ArrowLeft, Save, Printer, ChevronRight,
   Salad, Flame, Beef, Wheat, Droplets, Leaf, Calendar, User,
-  ClipboardCopy, StickyNote, Filter, MoreVertical, LogOut
+  ClipboardCopy, StickyNote, Filter, MoreVertical
 } from "lucide-react";
 
 /* ============================================================
@@ -1438,7 +1438,7 @@ const NAV_ITEMS = [
   { key: "diets", label: "Dietas salvas", icon: ClipboardList },
 ];
 
-const Sidebar = ({ view, goTo, onLogout }) => (
+const Sidebar = ({ view, goTo }) => (
   <div className="no-print" style={{ width: 208, flexShrink: 0, borderRight: "1px solid var(--border)", padding: "22px 14px", display: "flex", flexDirection: "column", gap: 4 }}>
     <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "0 8px", marginBottom: 22 }}>
       <img src={LOGO_SRC} alt="Logo" style={{ width: 32, height: 32, borderRadius: 8, boxShadow: "0 2px 8px rgba(23,21,18,0.2)" }} />
@@ -1458,14 +1458,6 @@ const Sidebar = ({ view, goTo, onLogout }) => (
       );
     })}
     <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
-      <button onClick={onLogout}
-        style={{
-          display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", borderRadius: 8,
-          border: "1px solid var(--border)", color: "var(--text-muted)", background: "var(--surface)",
-          fontWeight: 600, fontSize: 13, textAlign: "left"
-        }}>
-        <LogOut size={15} /> Sair com segurança
-      </button>
       <div style={{ padding: "4px 8px", fontSize: 11, color: "var(--text-soft)", lineHeight: 1.5 }}>
         Estrutura pronta para banco de dados e app mobile.
       </div>
@@ -1497,7 +1489,7 @@ const usePersistentState = (key, initialValue) => {
   return [value, setValue];
 };
 
-export default function NutriPlanner({ onLogout }) {
+export default function NutriPlanner() {
   const [view, setView] = useState("dashboard");
   const [patients, setPatients] = usePersistentState("hlnutri:patients", SEED_PATIENTS);
   const [foods, setFoods] = usePersistentState("hlnutri:foods", SEED_FOODS);
@@ -1603,7 +1595,7 @@ export default function NutriPlanner({ onLogout }) {
         <PrintDiet diet={draftDiet} patient={printPatient} foods={foods} nutriName="@hlnutri" />
       ) : (
         <div style={{ display: "flex", maxWidth: 1240, margin: "0 auto" }}>
-          <Sidebar view={view} goTo={goTo} onLogout={onLogout} />
+          <Sidebar view={view} goTo={goTo} />
           <div style={{ flex: 1, padding: "26px 32px", minWidth: 0 }}>
             {view === "dashboard" && <Dashboard patients={patients} diets={diets} foods={foods} goTo={goTo} />}
             {view === "patients" && <PatientsView patients={patients} diets={diets} setPatients={setPatients} goTo={goTo} />}

@@ -39,25 +39,12 @@ nutri-planner/
 ├── src/
 │   ├── main.jsx      # ponto de entrada
 │   ├── App.jsx        # componente principal (NutriPlanner)
-│   ├── auth/           # sessão, login e recuperação de senha
 │   └── index.css      # estilos base
 ```
 
-## Acesso protegido
+## Acesso direto
 
-O login usa o Supabase Auth. A senha é validada pelo serviço de autenticação e nunca deve ser colocada no código ou nas configurações do GitHub.
-
-1. Crie um projeto no Supabase.
-2. Em **Authentication → Providers → Email**, mantenha o login por e-mail ativo e desative novos cadastros públicos.
-3. Em **Authentication → Users**, crie manualmente a única conta autorizada.
-4. Em **Authentication → URL Configuration**, configure:
-   - Site URL: `https://haroldolnutri.github.io/haroldolnutri-Dieta-Hlnutri/`
-   - Redirect URL: `https://haroldolnutri.github.io/haroldolnutri-Dieta-Hlnutri/**`
-5. O workflow de publicação fornece ao build a URL e a chave pública do projeto Supabase.
-
-Use somente a chave pública (`publishable`). Nunca coloque uma chave `secret` ou `service_role` no navegador.
-
-Para desenvolvimento local, copie `.env.example` para `.env.local` e preencha apenas os dois valores públicos.
+O sistema abre diretamente, sem tela de usuário e senha.
 
 ## Publicação automática
 
